@@ -3,6 +3,8 @@ import io
 import os
 import shutil
 import subprocess
+import sys
+import tempfile
 import time
 import urllib.parse
 from datetime import datetime
@@ -15,7 +17,7 @@ from PIL import Image
 from gtts import gTTS
 from lingua import Language, LanguageDetectorBuilder
 from pydub import AudioSegment
-from pydub.playback import play
+from pydub.utils import get_player_name
 
 
 # Configurações padrão da estação.
@@ -328,10 +330,9 @@ def read_aloud(
 
     # Concatenação limpa e segura de áudio via pydub.AudioSegment
     combined_audio = AudioSegment.empty()
-    for num, text in enumerate(texts):
-        print(f"{num}: {text} ({languages[num]})")
+    for text, lang in zip(texts, languages):
         fp = io.BytesIO()
-        gTTS(text, lang=languages[num]).write_to_fp(fp)
+        gTTS(text, lang=lang).write_to_fp(fp)
         fp.seek(0)
         segment = AudioSegment.from_file(fp, format="mp3")
         combined_audio += segment
@@ -339,10 +340,46 @@ def read_aloud(
     try:
         if mixer and original_volume is not None and volume_level is not None:
             mixer.setvolume(volume_level)
-        play(combined_audio)
+        play_audio(combined_audio)
     finally:
         if mixer and original_volume is not None:
             mixer.setvolume(original_volume[0])
+
+
+def play_audio(audio_segment: AudioSegment):
+    """
+    Reproduz o áudio de forma limpa, suprimindo mensagens de banner e estatísticas do player de linha de comando.
+    """
+    player = get_player_name()
+    with tempfile.NamedTemporaryFile("w+b", suffix=".wav") as f:
+        audio_segment.export(f.name, "wav")
+        cmd = [player, "-nodisp", "-autoexit", "-hide_banner", "-loglevel", "quiet", f.name]
+        try:
+            subprocess.run(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False
+            )
+        except Exception as e:
+            print(f"Aviso na reprodução de áudio: {e}")
+
+
+def print_track_banner(track_title: str, station_name: str, language, album_art: str = None, timestamp: str = None, is_dry_run: bool = False):
+    """
+    Exibe uma saída moderna e limpa no terminal para a faixa atual.
+    """
+    line = "─" * 60
+    time_tag = f"  [{timestamp}]" if timestamp else ""
+    print(f"\n{line}")
+    print(f"  🎵  {track_title}{time_tag}")
+    print(f"  📻  {station_name}  •  🌐 {language[0]} ({language[1]})")
+    if is_dry_run:
+        if album_art:
+            print(f"  🖼️   Capa: {album_art}")
+        print("  ⚡  [Modo Dry-Run: Áudio e notificações desativados]")
+    print(f"{line}\n")
 
 
 def fetch_track_state(slug: str):
@@ -428,16 +465,25 @@ def main():
     notify_enabled = not args.no_notify and not args.dry_run
 
     if args.watch:
-        print(f"Iniciando monitoramento da rádio '{slug}' a cada {args.interval}s... (Ctrl+C para sair)")
+        print(f"📻 Monitorando rádio '{slug}' a cada {args.interval}s (Pressione Ctrl+C para encerrar)")
         last_track = None
         try:
             while True:
                 track_title, album_art, station_name = fetch_track_state(slug)
+                now_str = datetime.now().strftime("%H:%M:%S")
+
+                sys.stdout.write("\r\033[K")
+                sys.stdout.flush()
+
                 if track_title and track_title != last_track:
-                    print(f"\n[Nova Faixa] {track_title}")
+                    language = detect_language(track_title, speak_hu3br=args.hu3br)
                     last_track = track_title
 
-                    language = detect_language(track_title, speak_hu3br=args.hu3br)
+                    print_track_banner(
+                        track_title, station_name, language,
+                        album_art=album_art, timestamp=now_str, is_dry_run=args.dry_run
+                    )
+
                     if notify_enabled:
                         notify_devices(
                             track_title, album_art, language,
@@ -451,23 +497,32 @@ def main():
                             station_name=station_name, volume_level=args.volume,
                             speak_hu3br=args.hu3br, enabled=True, log_path=log_path
                         )
-                    elif args.dry_run:
-                        print(f"[Dry Run] Idioma: {language[0]} ({language[1]}), Capa: {album_art}")
+                elif track_title:
+                    print(f"[{now_str}] ⏸️  Mesma música: {track_title}")
 
-                time.sleep(args.interval)
+                # Contagem regressiva interativa para o próximo ciclo
+                for remaining in range(args.interval, 0, -1):
+                    sys.stdout.write(f"\r\033[K⏳ Próxima verificação em {remaining}s...")
+                    sys.stdout.flush()
+                    time.sleep(1)
+                sys.stdout.write("\r\033[K")
+                sys.stdout.flush()
+
         except KeyboardInterrupt:
-            print("\nMonitoramento encerrado pelo usuário.")
+            sys.stdout.write("\r\033[K")
+            sys.stdout.flush()
+            print("\n🛑 Monitoramento encerrado pelo usuário.")
     else:
         track_title, album_art, station_name = fetch_track_state(slug)
         if not track_title:
-            print("Falha na extração do conteúdo da página ou rádio fora do ar.")
+            print("❌ Falha na extração do conteúdo da página ou rádio fora do ar.")
             return
 
         language = detect_language(track_title, speak_hu3br=args.hu3br)
-        print(f"Estação: {station_name}")
-        print(f"Tocando agora: {track_title}")
-        print(f"Idioma detectado: {language[0]} ({language[1]})")
-        print(f"Capa: {album_art}")
+        print_track_banner(
+            track_title, station_name, language,
+            album_art=album_art, is_dry_run=args.dry_run
+        )
 
         if notify_enabled:
             notify_devices(
