@@ -46,8 +46,8 @@ def get_app_paths():
     cache_base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
     state_base = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
 
-    cache_dir = os.path.join(cache_base, "shazam-oliva")
-    log_dir = os.path.join(state_base, "shazam-oliva")
+    cache_dir = os.path.join(cache_base, "oliva-announcer")
+    log_dir = os.path.join(state_base, "oliva-announcer")
 
     os.makedirs(cache_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
@@ -402,7 +402,7 @@ def fetch_track_state(slug: str):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Shazam-Oliva: Identifica e anuncia faixas em execução na Social Rádio."
+        description="Oliva Announcer: Identifica e anuncia faixas em execução na Social Rádio."
     )
     parser.add_argument(
         "--radio", "-r",

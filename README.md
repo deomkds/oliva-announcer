@@ -1,6 +1,6 @@
-# Shazam-Oliva
+# Oliva Announcer
 
-Shazam-Oliva é um script em Python que identifica a música transmitida em tempo real na [Rádio Verde Oliva](https://www.socialradio.com.br/radio/verdeolivaresende/) (ou qualquer outra estação hospedada na Social Rádio).
+Oliva Announcer é um script em Python que identifica a música transmitida em tempo real na [Rádio Verde Oliva](https://www.socialradio.com.br/radio/verdeolivaresende/) (ou qualquer outra estação hospedada na Social Rádio).
 
 Ao receber a informação, o script anuncia, em voz alta, o nome da música e do intérprete. Também envia uma notificação para a área de trabalho (`kdialog` ou `notify-send`) com a imagem da capa do álbum e para todos os dispositivos pareados no [KDE Connect](https://kdeconnect.kde.org/).
 
@@ -11,7 +11,7 @@ Ao receber a informação, o script anuncia, em voz alta, o nome da música e do
 - **Interface CLI com Parâmetros (`argparse`):** Alterne estações, volume, modo silencioso e intervalos diretamente pelo terminal.
 - **Detector de Idioma Otimizado:** Singleton de modelos `lingua` para detecção em milissegundos.
 - **Multi-Desktop:** Suporte automático ao `kdialog` (KDE Plasma) com fallback para `notify-send` (GNOME, XFCE, Sway, etc.).
-- **Padrão XDG:** Capas em `~/.cache/shazam-oliva/` e registros em `~/.local/state/shazam-oliva/oliva_log.txt`.
+- **Padrão XDG:** Capas em `~/.cache/oliva-announcer/` e registros em `~/.local/state/oliva-announcer/oliva_log.txt`.
 - **Áudio Sem Cortes:** Costura de frases de idiomas mistos através do `pydub.AudioSegment`.
 
 ---
