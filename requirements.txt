@@ -1,8 +1,7 @@
-selenium>=4.25.0
-beautifulsoup4>=4.13.0b2
 gTTS>=2.5.3
 pydub>=0.25.1
-lingua-language-detector~=1.4.0
+lingua-language-detector>=1.4.0
 pillow>=11.0.0
 requests>=2.32.3
 audioop-lts>=0.2.1
+pyalsaaudio>=0.11.0
