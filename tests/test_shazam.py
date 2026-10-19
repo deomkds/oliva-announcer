@@ -119,3 +119,19 @@ class TestParseArgs:
         assert args.interval == 30
         assert args.radio == "minha-radio"
         assert args.dry_run is True
+
+
+class TestGetConnectedDevices:
+    def test_filter_valid_devices(self, monkeypatch):
+        from main import get_connected_devices
+        import subprocess
+
+        fake_stdout = "dev1\n_invalid\n  \ndev2\n"
+
+        class DummyCompletedProcess:
+            stdout = fake_stdout
+
+        monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: DummyCompletedProcess())
+        devices = get_connected_devices()
+        assert devices == ["dev1", "dev2"]
+

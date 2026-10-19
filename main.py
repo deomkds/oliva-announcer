@@ -192,7 +192,7 @@ def detect_language(text: str, speak_hu3br: bool = False):
 def get_connected_devices():
     try:
         results = subprocess.run(
-            ["kdeconnect-cli", "--list-devices", "--id-only"],
+            ["kdeconnect-cli", "--list-available", "--id-only"],
             capture_output=True,
             text=True
         ).stdout.strip().split("\n")
@@ -267,13 +267,16 @@ def notify_devices(
             print(f"Aviso ao enviar notificação na área de trabalho: {e}")
 
     if notify_kde_connect:
-        try:
-            device_ids = get_connected_devices()
-            for device_id in device_ids:
+        device_ids = get_connected_devices()
+        for device_id in device_ids:
+            try:
                 cmd = ["kdeconnect-cli", "--device", device_id, "--ping-msg", message]
-                subprocess.run(cmd, check=True)
-        except Exception as e:
-            print(f"Failed to send notification via KDE Connect: {e}")
+                subprocess.run(cmd, check=True, capture_output=True, text=True)
+            except subprocess.CalledProcessError as e:
+                err_msg = e.stderr.strip() if e.stderr else str(e)
+                print(f"Aviso ao enviar notificação KDE Connect para o dispositivo {device_id}: {err_msg}")
+            except Exception as e:
+                print(f"Aviso ao enviar notificação KDE Connect para o dispositivo {device_id}: {e}")
 
 
 def read_aloud(
